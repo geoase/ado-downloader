@@ -23,13 +23,13 @@ from pathlib import Path
 
 import json
 import cdsapi
+import os
 
 class ClimateDataStoreBaseDownloader(object):
     """
     TODO
     """
-    def __init__(self, storage_path, cds_product, cds_filter):
-        self.storage_path = storage_path
+    def __init__(self, cds_product, cds_filter):
         self.cds_product = cds_product
         self.cds_filter = cds_filter
         # FIXME User Credentials from client config file or .env
@@ -47,6 +47,21 @@ class ClimateDataStoreBaseDownloader(object):
             print(e.args)
             raise
 
+    # @classmethod
+    # def from_cds_resource(cls, cds_resource):
+    #     try:
+    #         r = requests.get(
+    #             url='https://cds.climate.copernicus.eu/api/v2.ui/resources/{}'.format(cds_resource))
+
+    #         # #Read JSON config file
+    #         # with open(json_config_path, 'r') as f:
+    #         #     cds_downloader = cls(**json.load(f))
+
+    #         # return cds_downloader
+    #     except Exception as e:
+    #         print(e.args)
+    #         raise
+
     def get_data(self, input):
         """Method documentation"""
         raise NotImplementedError("Please Implement this method")
@@ -60,8 +75,8 @@ class ClimateDataStoreBaseDownloader(object):
 
 
 class YearlyDownloader(ClimateDataStoreBaseDownloader):
-    def get_data(self):
-        Path(self.storage_path).mkdir(parents=True, exist_ok=True)
+    def get_data(self, storage_path):
+        Path(storage_path).mkdir(parents=True, exist_ok=True)
 
         yearly_cds_filter = self.cds_filter
         lst_years = yearly_cds_filter.pop("year")
@@ -72,6 +87,9 @@ class YearlyDownloader(ClimateDataStoreBaseDownloader):
 
             p = Process(
                 target=self._retrieve_file,
-                args=(self.cds_product, yearly_cds_filter, yearly_file_path)
+                args=(self.cds_product,
+                      yearly_cds_filter,
+                      os.path.join(storage_path, yearly_file_path)
+                )
             )
             p.start()
