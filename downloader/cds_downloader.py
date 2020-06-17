@@ -5,12 +5,11 @@ cds_downloader.py:
 Climate Data Store Downloader
 
 TODO:
- - Read JSON
  - Download yearly, monthly, or daily file
  - Check available data and only download missing data
- - Use api instead of json for filter
+ - Use api instead of json for filter (difficult constraints)
  - Logging
- - Use multiprocessing (or multiple docker instances) for big request
+ - Adapt requirements.txt
 """
 
 __author__ = "Georg Seyerl"
@@ -24,6 +23,7 @@ from pathlib import Path
 import json
 import cdsapi
 import os
+import requests
 
 class ClimateDataStoreBaseDownloader(object):
     """
@@ -32,7 +32,12 @@ class ClimateDataStoreBaseDownloader(object):
     def __init__(self, cds_product, cds_filter):
         self.cds_product = cds_product
         self.cds_filter = cds_filter
-        # FIXME User Credentials from client config file or .env
+
+        # TODO Exception handling
+        self.cds_api = requests.get(
+            url='https://cds.climate.copernicus.eu/api/v2.ui/resources/{}'.format(cds_product)).json()
+
+        # User Credentials from environment variables 'CDSAPI_URL' and 'CDSAPI_KEY'
         self.cdsapi_client = cdsapi.Client()
 
     @classmethod
@@ -47,21 +52,6 @@ class ClimateDataStoreBaseDownloader(object):
             print(e.args)
             raise
 
-    # @classmethod
-    # def from_cds_resource(cls, cds_resource):
-    #     try:
-    #         r = requests.get(
-    #             url='https://cds.climate.copernicus.eu/api/v2.ui/resources/{}'.format(cds_resource))
-
-    #         # #Read JSON config file
-    #         # with open(json_config_path, 'r') as f:
-    #         #     cds_downloader = cls(**json.load(f))
-
-    #         # return cds_downloader
-    #     except Exception as e:
-    #         print(e.args)
-    #         raise
-
     def get_data(self, input):
         """Method documentation"""
         raise NotImplementedError("Please Implement this method")
@@ -72,6 +62,15 @@ class ClimateDataStoreBaseDownloader(object):
             cds_filter,
             file_name
         )
+
+    def _get_request_size(self):
+        request_size = (len(self.cds_filter["variable"])*
+                        len(self.cds_filter["year"])*
+                        len(self.cds_filter["month"])*
+                        len(self.cds_filter["day"])*
+                        len(self.cds_filter["time"]))
+
+        return request_size
 
 
 class YearlyDownloader(ClimateDataStoreBaseDownloader):
@@ -93,3 +92,54 @@ class YearlyDownloader(ClimateDataStoreBaseDownloader):
                 )
             )
             p.start()
+
+
+class MonthlyDownloader(ClimateDataStoreBaseDownloader):
+    def get_data(self, storage_path):
+        Path(storage_path).mkdir(parents=True, exist_ok=True)
+
+        monthly_cds_filter = self.cds_filter
+        lst_years = monthly_cds_filter.pop("year")
+        lst_months = monthly_cds_filter.pop("month")
+
+        for year in lst_years:
+            monthly_cds_filter["year"] = year
+            for month in lst_months:
+                monthly_cds_filter["month"] = month
+                monthly_file_path = year + month + "_" + self.cds_product + "." + monthly_cds_filter.get("format", "grib")
+
+                p = Process(
+                    target=self._retrieve_file,
+                    args=(self.cds_product,
+                          monthly_cds_filter,
+                          os.path.join(storage_path, monthly_file_path)
+                    )
+                )
+                p.start()
+
+
+class DailyDownloader(ClimateDataStoreBaseDownloader):
+    def get_data(self, storage_path):
+        Path(storage_path).mkdir(parents=True, exist_ok=True)
+
+        daily_cds_filter = self.cds_filter
+        lst_years = daily_cds_filter.pop("year")
+        lst_months = daily_cds_filter.pop("month")
+        lst_days = daily_cds_filter.pop("day")
+
+        for year in lst_years:
+            daily_cds_filter["year"] = year
+            for month in lst_months:
+                daily_cds_filter["month"] = month
+                for day in lst_days:
+                    daily_cds_filter["day"] = day
+                    daily_file_path = year + month + day + "_" + self.cds_product + "." + daily_cds_filter.get("format", "grib")
+
+                    p = Process(
+                        target=self._retrieve_file,
+                        args=(self.cds_product,
+                              daily_cds_filter,
+                              os.path.join(storage_path, daily_file_path)
+                        )
+                    )
+                    p.start()
