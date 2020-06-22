@@ -1,0 +1,24 @@
+{
+    "cds_product": "reanalysis-era5-single-levels",
+    "cds_filter":
+    {
+        "product_type": "reanalysis",
+        "format": "grib",
+        "variable": [
+            "2m_temperature","potential_evaporation"
+        ],
+        "year": [
+            "1979", "1980"
+        ],
+        "month": [
+            "01", "02"
+        ],
+        "day": [
+            "01", "02"
+        ],
+        "time": [
+            "00:00", "01:00"
+        ],
+        "area": [50.7, 3.6, 42.9, 17.2]
+    }
+}

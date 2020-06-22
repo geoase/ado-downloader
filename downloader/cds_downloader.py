@@ -20,21 +20,23 @@ __status__ = "Development"
 from multiprocessing import Process
 from pathlib import Path
 
-import json
-import cdsapi
 import os
+import math
+import json
+import copy
 import requests
+import itertools
 
-class ClimateDataStoreBaseDownloader(object):
+import cdsapi
+
+class ClimateDataStoreDownloader(object):
     """
     TODO
     """
     def __init__(self, cds_product, cds_filter):
         self.cds_product = cds_product
         self.cds_filter = cds_filter
-
-        # TODO Exception handling
-        self.cds_api = requests.get(
+        self.cds_webapi = requests.get(
             url='https://cds.climate.copernicus.eu/api/v2.ui/resources/{}'.format(cds_product)).json()
 
         # User Credentials from environment variables 'CDSAPI_URL' and 'CDSAPI_KEY'
@@ -52,9 +54,55 @@ class ClimateDataStoreBaseDownloader(object):
             print(e.args)
             raise
 
-    def get_data(self, input):
+    def get_data(self, storage_path, split_keys=None):
         """Method documentation"""
-        raise NotImplementedError("Please Implement this method")
+
+        # Raise error if request is to big
+        # Include description of split_keys argument
+        request_size = self._get_request_size()
+        selection_limit = self.cds_webapi["selection_limit"]
+
+        Path(storage_path).mkdir(parents=True, exist_ok=True)
+
+        if split_keys is None:
+            file_path = 'all' + \
+                        "_" + self.cds_product + \
+                        "." + self.cds_filter.get("format", "grib")
+
+            self._retrieve_file(self.cds_product,
+                                self.cds_filter,
+                                os.path.join(storage_path, file_path)
+            )
+        else:
+            split_filter = self._expand_by_keys(self.cds_filter, split_keys)
+            for cds_filter in split_filter:
+                file_path = '-'.join([cds_filter.get(k) for k in split_keys]) + \
+                            "_" + self.cds_product + \
+                            "." + cds_filter.get("format", "grib")
+
+                p = Process(
+                    target=self._retrieve_file,
+                    args=(self.cds_product,
+                          cds_filter,
+                          os.path.join(storage_path, file_path)
+                    )
+                )
+                p.start()
+
+
+    def _get_request_size(self, lst_keys=["variable", "year", "month", "day", "time"]):
+        request_size = math.prod(
+            [len(lst) for lst in [self.cds_filter.get(k) for k in lst_keys]]
+        )
+        return request_size
+
+
+    def _expand_by_keys(self, dct, lst_keys):
+        tmp_dct = copy.deepcopy(dct)
+        for value in itertools.product(*[dct.get(key) for key in lst_keys]):
+            tmp_dct.update(dict(zip(lst_keys, value)))
+            yield tmp_dct
+
 
     def _retrieve_file(self, cds_product, cds_filter, file_name):
         self.cdsapi_client.retrieve(
@@ -62,84 +110,3 @@ class ClimateDataStoreBaseDownloader(object):
             cds_filter,
             file_name
         )
-
-    def _get_request_size(self):
-        request_size = (len(self.cds_filter["variable"])*
-                        len(self.cds_filter["year"])*
-                        len(self.cds_filter["month"])*
-                        len(self.cds_filter["day"])*
-                        len(self.cds_filter["time"]))
-
-        return request_size
-
-
-class YearlyDownloader(ClimateDataStoreBaseDownloader):
-    def get_data(self, storage_path):
-        Path(storage_path).mkdir(parents=True, exist_ok=True)
-
-        yearly_cds_filter = self.cds_filter
-        lst_years = yearly_cds_filter.pop("year")
-
-        for year in lst_years:
-            yearly_cds_filter["year"] = year
-            yearly_file_path = year + "_" + self.cds_product + "." + yearly_cds_filter.get("format", "grib")
-
-            p = Process(
-                target=self._retrieve_file,
-                args=(self.cds_product,
-                      yearly_cds_filter,
-                      os.path.join(storage_path, yearly_file_path)
-                )
-            )
-            p.start()
-
-
-class MonthlyDownloader(ClimateDataStoreBaseDownloader):
-    def get_data(self, storage_path):
-        Path(storage_path).mkdir(parents=True, exist_ok=True)
-
-        monthly_cds_filter = self.cds_filter
-        lst_years = monthly_cds_filter.pop("year")
-        lst_months = monthly_cds_filter.pop("month")
-
-        for year in lst_years:
-            monthly_cds_filter["year"] = year
-            for month in lst_months:
-                monthly_cds_filter["month"] = month
-                monthly_file_path = year + month + "_" + self.cds_product + "." + monthly_cds_filter.get("format", "grib")
-
-                p = Process(
-                    target=self._retrieve_file,
-                    args=(self.cds_product,
-                          monthly_cds_filter,
-                          os.path.join(storage_path, monthly_file_path)
-                    )
-                )
-                p.start()
-
-
-class DailyDownloader(ClimateDataStoreBaseDownloader):
-    def get_data(self, storage_path):
-        Path(storage_path).mkdir(parents=True, exist_ok=True)
-
-        daily_cds_filter = self.cds_filter
-        lst_years = daily_cds_filter.pop("year")
-        lst_months = daily_cds_filter.pop("month")
-        lst_days = daily_cds_filter.pop("day")
-
-        for year in lst_years:
-            daily_cds_filter["year"] = year
-            for month in lst_months:
-                daily_cds_filter["month"] = month
-                for day in lst_days:
-                    daily_cds_filter["day"] = day
-                    daily_file_path = year + month + day + "_" + self.cds_product + "." + daily_cds_filter.get("format", "grib")
-
-                    p = Process(
-                        target=self._retrieve_file,
-                        args=(self.cds_product,
-                              daily_cds_filter,
-                              os.path.join(storage_path, daily_file_path)
-                        )
-                    )
-                    p.start()
