@@ -5,11 +5,12 @@ cds_downloader.py:
 Climate Data Store Downloader
 
 TODO:
- - Download yearly, monthly, or daily file
+ - Tests
  - Check available data and only download missing data
- - Use api instead of json for filter (difficult constraints)
  - Logging
  - Adapt requirements.txt
+ - Dynamic split by lists in cds_filter (order) e.g.
+   ensemble_member, experiment, model
 """
 
 __author__ = "Georg Seyerl"
@@ -43,6 +44,28 @@ class ClimateDataStoreDownloader(object):
         self.cdsapi_client = cdsapi.Client()
 
     @classmethod
+    def from_cds(cls, cds_product, cds_filter):
+        try:
+            dct_config = {"cds_product": cds_product,
+                          "cds_filter": cds_filter}
+            cds_downloader = cls(**dct_config)
+
+            return cds_downloader
+        except Exception as e:
+            print(e.args)
+            raise
+
+    @classmethod
+    def from_dict(cls, dct_config):
+        try:
+            cds_downloader = cls(**dct_config)
+
+            return cds_downloader
+        except Exception as e:
+            print(e.args)
+            raise
+
+    @classmethod
     def from_json(cls, json_config_path):
         try:
             #Read JSON config file
@@ -54,45 +77,43 @@ class ClimateDataStoreDownloader(object):
             print(e.args)
             raise
 
+
     def get_data(self, storage_path, split_keys=None):
         """Method documentation"""
-
-        # Raise error if request is to big
-        # Include description of split_keys argument
-        request_size = self._get_request_size()
-        selection_limit = self.cds_webapi["selection_limit"]
+        if split_keys is None:
+            split_keys = self._get_split_keys()
 
         Path(storage_path).mkdir(parents=True, exist_ok=True)
 
-        if split_keys is None:
-            file_path = 'all' + \
+        split_filter = self._expand_by_keys(self.cds_filter, split_keys)
+        for cds_filter in split_filter:
+            file_path = '-'.join([cds_filter.get(k) for k in split_keys] or ["all"]) + \
                         "_" + self.cds_product + \
-                        "." + self.cds_filter.get("format", "grib")
+                        "." + cds_filter.get("format", "grib")
 
-            self._retrieve_file(self.cds_product,
-                                self.cds_filter,
-                                os.path.join(storage_path, file_path)
-            )
-        else:
-            split_filter = self._expand_by_keys(self.cds_filter, split_keys)
-            for cds_filter in split_filter:
-                file_path = '-'.join([cds_filter.get(k) for k in split_keys]) + \
-                            "_" + self.cds_product + \
-                            "." + cds_filter.get("format", "grib")
-
-                p = Process(
-                    target=self._retrieve_file,
-                    args=(self.cds_product,
-                          cds_filter,
-                          os.path.join(storage_path, file_path)
-                    )
+            p = Process(
+                target=self._retrieve_file,
+                args=(self.cds_product,
+                        cds_filter,
+                        os.path.join(storage_path, file_path)
                 )
-                p.start()
+            )
+            p.start()
 
 
-    def _get_request_size(self, lst_keys=["variable", "year", "month", "day", "time"]):
+    def _get_split_keys(self, lst_keys = ["year", "month", "day", "time", "variable"]):
+        if self._get_request_size(lst_keys) < self.cds_webapi["selection_limit"]:
+            return list()
+        else:
+            k = lst_keys.pop(0)
+            split_keys = self._get_split_keys(lst_keys)
+            split_keys.insert(0, k)
+            return split_keys
+
+
+    def _get_request_size(self, lst_keys):
         request_size = math.prod(
-            [len(lst) for lst in [self.cds_filter.get(k) for k in lst_keys]]
+            [len(lst) for lst in [self.cds_filter.get(k, 1) for k in lst_keys]]
         )
         return request_size
 
