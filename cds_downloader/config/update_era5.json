@@ -1,0 +1,16 @@
+{
+    "cds_product": "reanalysis-era5-single-levels",
+    "cds_filter":
+    {
+        "product_type": "reanalysis",
+        "format": "grib",
+        "variable":
+        [
+            "2m_temperature", "potential_evaporation",
+            "runoff", "total_precipitation"
+        ],
+        "update":"day",
+        "delay":5,
+        "area": [50.7, 3.6, 42.9, 17.2]
+    }
+}
