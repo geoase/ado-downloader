@@ -28,6 +28,8 @@ import json
 import copy
 import requests
 import itertools
+import datetime
+
 
 import cdsapi
 
@@ -84,10 +86,19 @@ class ClimateDataStoreDownloader(object):
         # 'CDSAPI_URL' and 'CDSAPI_KEY'
         self.cdsapi_client = cdsapi.Client()
 
+        # Create storage path
+        Path(storage_path).mkdir(parents=True, exist_ok=True)
+
+        if self.cds_filter.get("mode", None) == "update":
+            self._prepare_update_filter()
+
+            # Find original chunks
+            #split_keys = 
+
+        # If necessary, find keys for download chunking
         if split_keys is None:
             split_keys = self._get_split_keys()
 
-        Path(storage_path).mkdir(parents=True, exist_ok=True)
 
         split_filter = self._expand_by_keys(self.cds_filter, split_keys)
         all_processes = []
@@ -144,4 +155,10 @@ class ClimateDataStoreDownloader(object):
             cds_filter,
             file_name
         )
+
+    def _prepare_update_filter(self):
+        date_now = datetime.datetime.now()
+        time_delta = datetime.timedelta(
+            seconds=self.cds_filter.get("delay", 0))
+
 

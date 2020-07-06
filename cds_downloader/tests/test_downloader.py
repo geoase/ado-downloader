@@ -22,6 +22,21 @@ def era5_downloader():
     )
 
 
+@pytest.fixture
+def era5_update():
+    return ClimateDataStoreDownloader.from_cds(
+            "reanalysis-era5-single-levels",
+            {
+                "product_type": "reanalysis",
+                "format": "grib",
+                "variable": ["2m_temperature", "potential_evaporation"],
+                "mode":"update",
+                "delay": 432000,
+                "area": [50.7, 3.6, 42.9, 17.2]
+            }
+    )
+
+
 def test_cds_webapi(era5_downloader):
     assert len(era5_downloader.cds_webapi.keys()) == 36
     assert len(era5_downloader.cds_webapi.get("form")) == 10
