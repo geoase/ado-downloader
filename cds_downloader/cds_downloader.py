@@ -141,7 +141,6 @@ class ClimateDataStoreDownloader(object):
             tmp_dct.update(dict(zip(lst_keys, value)))
             yield tmp_dct
 
-
     def _retrieve_file(self, cds_product, cds_filter, file_name):
         self.cdsapi_client.retrieve(
             cds_product,
@@ -153,31 +152,41 @@ class ClimateDataStoreDownloader(object):
 
 
 class ClimateDataStoreUpdater(ClimateDataStoreDownloader):
-    def __init__(self, cds_product, cds_filter, **kwargs):
-        self.cds_product = cds_product
-        self.cds_filter = cds_filter
-        self.cds_webapi = requests.get(
-            url='https://cds.climate.copernicus.eu/api/v2.ui/resources/{}'.format(cds_product)).json()
-        self.cds_delay = kwargs.get("cds_delay", datetime.timedelta(days=0))
+    """
+    TODO
+    Update dataset at end and attach to last file
+    """
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
-        self._prepare_update_filter()
+        self.cds_filter_webapi, self.cds_dim_webapi = self._get_time_filter_and_dim_from_webapi()
 
 
-    def _prepare_update_filter(self):
+    def get_data(self, storage_path, split_keys=None):
+        # Load existing data and extract time dimension
+
+        # Get split_keys from existing dataset
+
+        # Adapt cds_filter
+
+        # Download new data in temporary folder
+        # temporary_path = None
+        # super().get_data(temporary_path, split_keys=split_keys)
+
+        # Add data to existing file or create new file if necessary
+        pass
+
+
+    def _get_time_filter_and_dim_from_webapi(self):
         date_now = datetime.datetime.utcnow()
-        date_end = date_now
 
-        filter_date_webapi = self._filter_webapi_date()
+        # Extract temporal filter from webapi
+        filter_date_webapi = self._full_time_filter_from_webapi()
 
-        if "time" in filter_date_webapi:
-            avail_freq="{}H".format(24/len(filter_date_webapi.get("time")))
-        elif "day" in filter_date_webapi:
-            avail_freq="1D"
-        elif "month" in filter_date_webapi:
-            avail_freq="1M"
-        elif "year" in filter_date_webapi:
-            avail_freq="1Y"
+        # Assume temporal frequency from filter
+        cds_extracted_freq = self._freq_from_time_filter(filter_date_webapi)
 
+        # Acquire start and end date
         start_date = {}
         end_date = {}
         for k,v in filter_date_webapi.items():
@@ -188,27 +197,36 @@ class ClimateDataStoreUpdater(ClimateDataStoreDownloader):
                 start_date[k] = int(v[0])
                 end_date[k] = int(v[-1])
 
-
         # Define time dimension from webapi
         dim_time_webapi = pandas.date_range(
             start=datetime.datetime(**start_date),
             end=datetime.datetime(**end_date),
-            freq=avail_freq
+            freq=cds_extracted_freq
         )
-        # Cut time dimension
-        dim_time_webapi = dim_time_webapi[:dim_time_webapi.get_loc(date_end, "ffill")]
-        import ipdb; ipdb.set_trace()
+
+        # Cut time dimension if last date is bigger than today
+        if dim_time_webapi[-1] > date_now:
+            dim_time_webapi = dim_time_webapi[:dim_time_webapi.get_loc(date_now, "ffill")]
+
+        return filter_date_webapi, dim_time_webapi
 
 
-
-
-
-    def _filter_webapi_date(self, filter_names=["year", "month", "day", "time"]):
+    def _full_time_filter_from_webapi(self, filter_names=["year", "month", "day", "time"]):
         return {
             form_ele.get("name"): form_ele.get("details", {}).get("values",None)
             for form_ele in self.cds_webapi.get("form")
             if form_ele.get("name") in filter_names
         }
 
-    def _freq_from_webapi(self):
-        pass
+    def _freq_from_time_filter(self, filter_date_webapi):
+        # Assume temporal frequency
+        if "time" in filter_date_webapi:
+            avail_freq="{}H".format(24/len(filter_date_webapi.get("time")))
+        elif "day" in filter_date_webapi:
+            avail_freq="1D"
+        elif "month" in filter_date_webapi:
+            avail_freq="1M"
+        elif "year" in filter_date_webapi:
+            avail_freq="1Y"
+
+        return avail_freq
