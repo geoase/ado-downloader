@@ -1,3 +1,3 @@
 #!/usr/bin/env python
 
-from .cds_downloader import ClimateDataStoreDownloader
+from .cds_downloader import ClimateDataStoreDownloader, ClimateDataStoreUpdater

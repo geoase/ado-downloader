@@ -5,10 +5,10 @@ cds_downloader.py:
 Climate Data Store Downloader
 
 TODO:
- - Tests
  - Check available data and only download missing data
  - Logging
  - Adapt requirements.txt
+ - If config not complete, use criterias from cds_webapi
  - Dynamic split by lists in cds_filter (order) e.g.
    ensemble_member, experiment, model
  - Check configuration
@@ -29,15 +29,14 @@ import copy
 import requests
 import itertools
 import datetime
-
-
 import cdsapi
+import pandas
 
 class ClimateDataStoreDownloader(object):
     """
     TODO
     """
-    def __init__(self, cds_product, cds_filter):
+    def __init__(self, cds_product, cds_filter, **kwargs):
         self.cds_product = cds_product
         self.cds_filter = cds_filter
         self.cds_webapi = requests.get(
@@ -45,10 +44,11 @@ class ClimateDataStoreDownloader(object):
 
 
     @classmethod
-    def from_cds(cls, cds_product, cds_filter):
+    def from_cds(cls, cds_product, cds_filter, **kwargs):
         try:
             dct_config = {"cds_product": cds_product,
                           "cds_filter": cds_filter}
+            dct_config.update(**kwargs)
             cds_downloader = cls(**dct_config)
 
             return cds_downloader
@@ -89,16 +89,9 @@ class ClimateDataStoreDownloader(object):
         # Create storage path
         Path(storage_path).mkdir(parents=True, exist_ok=True)
 
-        if self.cds_filter.get("mode", None) == "update":
-            self._prepare_update_filter()
-
-            # Find original chunks
-            #split_keys = 
-
         # If necessary, find keys for download chunking
         if split_keys is None:
             split_keys = self._get_split_keys()
-
 
         split_filter = self._expand_by_keys(self.cds_filter, split_keys)
         all_processes = []
@@ -156,9 +149,66 @@ class ClimateDataStoreDownloader(object):
             file_name
         )
 
+
+
+
+class ClimateDataStoreUpdater(ClimateDataStoreDownloader):
+    def __init__(self, cds_product, cds_filter, **kwargs):
+        self.cds_product = cds_product
+        self.cds_filter = cds_filter
+        self.cds_webapi = requests.get(
+            url='https://cds.climate.copernicus.eu/api/v2.ui/resources/{}'.format(cds_product)).json()
+        self.cds_delay = kwargs.get("cds_delay", datetime.timedelta(days=0))
+
+        self._prepare_update_filter()
+
+
     def _prepare_update_filter(self):
-        date_now = datetime.datetime.now()
-        time_delta = datetime.timedelta(
-            seconds=self.cds_filter.get("delay", 0))
+        date_now = datetime.datetime.utcnow()
+        date_end = date_now
+
+        filter_date_webapi = self._filter_webapi_date()
+
+        if "time" in filter_date_webapi:
+            avail_freq="{}H".format(24/len(filter_date_webapi.get("time")))
+        elif "day" in filter_date_webapi:
+            avail_freq="1D"
+        elif "month" in filter_date_webapi:
+            avail_freq="1M"
+        elif "year" in filter_date_webapi:
+            avail_freq="1Y"
+
+        start_date = {}
+        end_date = {}
+        for k,v in filter_date_webapi.items():
+            if k == "time":
+                start_date["hour"],start_date["minute"] = (map(int, v[0].split(":")))
+                end_date["hour"],start_date["minute"] = (map(int, v[-1].split(":")))
+            else:
+                start_date[k] = int(v[0])
+                end_date[k] = int(v[-1])
 
 
+        # Define time dimension from webapi
+        dim_time_webapi = pandas.date_range(
+            start=datetime.datetime(**start_date),
+            end=datetime.datetime(**end_date),
+            freq=avail_freq
+        )
+        # Cut time dimension
+        dim_time_webapi = dim_time_webapi[:dim_time_webapi.get_loc(date_end, "ffill")]
+        import ipdb; ipdb.set_trace()
+
+
+
+
+
+    def _filter_webapi_date(self, filter_names=["year", "month", "day", "time"]):
+        return {
+            form_ele.get("name"): form_ele.get("details", {}).get("values",None)
+            for form_ele in self.cds_webapi.get("form")
+            if form_ele.get("name") in filter_names
+        }
+
+    def _freq_from_webapi(self):
+        pass

@@ -24,16 +24,15 @@ def era5_downloader():
 
 @pytest.fixture
 def era5_update():
-    return ClimateDataStoreDownloader.from_cds(
-            "reanalysis-era5-single-levels",
-            {
-                "product_type": "reanalysis",
-                "format": "grib",
-                "variable": ["2m_temperature", "potential_evaporation"],
-                "mode":"update",
-                "delay": 432000,
-                "area": [50.7, 3.6, 42.9, 17.2]
-            }
+    return ClimateDataStoreUpdater.from_cds(
+        "reanalysis-era5-single-levels",
+        {
+            "product_type": "reanalysis",
+            "format": "grib",
+            "variable": ["2m_temperature", "potential_evaporation"],
+            "area": [50.7, 3.6, 42.9, 17.2]
+        },
+        cds_delay = datetime.timedelta(days=5)
     )
 
 
