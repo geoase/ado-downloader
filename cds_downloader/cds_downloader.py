@@ -31,6 +31,14 @@ import itertools
 import datetime
 import cdsapi
 import pandas
+import numpy
+
+import shutil
+import glob
+import subprocess
+import tempfile
+import xarray
+
 
 class ClimateDataStoreDownloader(object):
     """
@@ -154,27 +162,89 @@ class ClimateDataStoreDownloader(object):
 class ClimateDataStoreUpdater(ClimateDataStoreDownloader):
     """
     TODO
-    Update dataset at end and attach to last file
+    Update data collecation at end and attach to last file or create new file if necessary
+    Under development. For now only temporal update at end of time series
     """
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    # def __init__(self, **kwargs):
+    #     super().__init__(**kwargs)
 
-        self.cds_filter_webapi, self.cds_dim_webapi = self._get_time_filter_and_dim_from_webapi()
+    #     self.cds_time_filter_api, self.cds_time_dim_api = self._get_time_filter_and_dim_from_webapi()
+
+    def update_data(self, split_keys, path_string, **kwargs):
+
+        # TODO:
+        # - Problem if split_keys includes non temporal attributes
+
+        path_storage = Path(path_string)
+
+        if path_storage.is_dir():
+            lst_existing_files = [f for f in path_storage.glob("*." + self.cds_filter.get("format", "grib"))]
+            lst_existing_files = sorted(lst_existing_files)
+        else:
+            raise("No valid path")
 
 
-    def get_data(self, storage_path, split_keys=None):
-        # Load existing data and extract time dimension
+        # Load data and extract time dimension
+        xds_existing_data = xarray.open_mfdataset(lst_existing_files[-1].as_posix(), **kwargs)
 
-        # Get split_keys from existing dataset
+        try:
+            dim_time_storage = xds_existing_data.valid_time.to_series().values
+            freq_from_storage = xds_existing_data.valid_time.to_series().diff()
+        except AttributeError:
+            raise("No dimension 'valid_time' found in stored dataset")
 
-        # Adapt cds_filter
+        if freq_from_storage.nunique() == 1:
+            freq_from_storage = pandas.DateOffset(seconds=freq_from_storage[-1].seconds)
+        else:
+            raise("No continuous time frequency in storage data")
+
+        # Define new time dimension from storage info
+        dim_time_since_last = pandas.date_range(
+            start=dim_time_storage[-1],
+            end=datetime.datetime.now(),
+            freq=freq_from_storage,
+            closed="right"
+        )
+
+        # Adapt filter
+        year = [str(ele) for ele in dim_time_since_last.year.unique().sort_values()]
+        month = [str(ele) for ele in dim_time_since_last.month.unique().sort_values()]
+        day = [str(ele) for ele in dim_time_since_last.day.unique().sort_values()]
+        time = [ele.isoformat() for ele in numpy.unique(dim_time_since_last.time)]
+
+        self.cds_filter.update(
+        {"year": year,
+         "month": month,
+         "day": day,
+         "time": time
+        })
 
         # Download new data in temporary folder
-        # temporary_path = None
-        # super().get_data(temporary_path, split_keys=split_keys)
+        temporary_path = tempfile.mkdtemp()
+        super(ClimateDataStoreUpdater, self).get_data(temporary_path, split_keys)
+
+        lst_new_files = [f for f in Path(temporary_path).iterdir()]
+
+        # assert lst_new_files[0].rsplit("/",1)[-1] == path.rsplit("/",1)[-1], "Merge Problem, check your split_keys"
 
         # Add data to existing file or create new file if necessary
-        pass
+        # Merge first file
+        import ipdb; ipdb.set_trace()
+        path_merge_file = os.path.join(temporary_path, "tmp_merge.grib")
+        subprocess.call([
+            "grib_copy",
+            lst_existing_files[-1],
+            lst_new_files[0],
+            path_merge_file
+        ])
+
+        shutil.move(path_merge_file, lst_new_files[0].as_posix())
+
+        # Move rest of files if
+        for f in lst_new_files:
+            # Move and overwrite merged file
+            shutil.move(f, path_storage.joinpath(f.name))
+
 
 
     def _get_time_filter_and_dim_from_webapi(self):

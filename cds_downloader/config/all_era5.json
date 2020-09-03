@@ -4,11 +4,6 @@
     {
         "product_type": "reanalysis",
         "format": "grib",
-        "variable":
-        [
-            "2m_temperature", "potential_evaporation",
-            "runoff", "total_precipitation"
-        ],
         "year": [
             "1979", "1980", "1981",
             "1982", "1983", "1984",
@@ -53,6 +48,11 @@
             "15:00", "16:00", "17:00",
             "18:00", "19:00", "20:00",
             "21:00", "22:00", "23:00"
+        ],
+        "variable":
+        [
+            "2m_temperature", "potential_evaporation",
+            "runoff", "total_precipitation"
         ],
         "area": [50.7, 3.6, 42.9, 17.2]
     }
