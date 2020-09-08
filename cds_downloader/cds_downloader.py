@@ -104,7 +104,7 @@ class ClimateDataStoreDownloader(object):
         split_filter = self._expand_by_keys(self.cds_filter, split_keys)
         all_processes = []
         for cds_filter in split_filter:
-            file_path = '-'.join([cds_filter.get(k) for k in split_keys] or ["all"]) + \
+            file_path = '_'.join([cds_filter.get(k) for k in split_keys] or ["all"]) + \
                         "_" + self.cds_product + \
                         "." + cds_filter.get("format", "grib")
 
@@ -162,18 +162,17 @@ class ClimateDataStoreDownloader(object):
 class ClimateDataStoreUpdater(ClimateDataStoreDownloader):
     """
     TODO
-    Update data collecation at end and attach to last file or create new file if necessary
-    Under development. For now only temporal update at end of time series
+    Redownload latest data file create new files if necessary
+    Under development. Only temporal update at end.
     """
     # def __init__(self, **kwargs):
     #     super().__init__(**kwargs)
 
     #     self.cds_time_filter_api, self.cds_time_dim_api = self._get_time_filter_and_dim_from_webapi()
 
-    def update_data(self, split_keys, path_string, **kwargs):
-
+    def update_data(self, path_string, split_keys, **kwargs):
         # TODO:
-        # - Problem if split_keys includes non temporal attributes
+        # - Problem if split_keys includes non temporal attributes (e.g. variable)
 
         path_storage = Path(path_string)
 
@@ -183,41 +182,36 @@ class ClimateDataStoreUpdater(ClimateDataStoreDownloader):
         else:
             raise("No valid path")
 
+        # Workaround: New updater
+        # Download full last file and if necessary following files
+        # Stop if split key value is not last element in full time filter from webapi
+        temporal_filter = self._full_time_filter_from_webapi()
+        datetime_utcnow = datetime.datetime.utcnow()
 
-        # Load data and extract time dimension
-        xds_existing_data = xarray.open_mfdataset(lst_existing_files[-1].as_posix(), **kwargs)
+        dct_update_from = {}
 
-        try:
-            dim_time_storage = xds_existing_data.valid_time.to_series().values
-            freq_from_storage = xds_existing_data.valid_time.to_series().diff()
-        except AttributeError:
-            raise("No dimension 'valid_time' found in stored dataset")
+        for i,k in enumerate(split_keys):
+            lst_key = [f.name.split("_")[i] for f in lst_existing_files]
+            if k in temporal_filter.keys():
+                dct_update_from[k] = sorted(list(set(lst_key)))[-1]
+                if temporal_filter[k][-1] != sorted(list(set(lst_key)))[-1]:
+                    break
 
-        if freq_from_storage.nunique() == 1:
-            freq_from_storage = pandas.DateOffset(seconds=freq_from_storage[-1].seconds)
-        else:
-            raise("No continuous time frequency in storage data")
 
-        # Define new time dimension from storage info
-        dim_time_since_last = pandas.date_range(
-            start=dim_time_storage[-1],
-            end=datetime.datetime.now(),
-            freq=freq_from_storage,
-            closed="right"
-        )
+        for k,v in dct_update_from.items():
+            import ipdb; ipdb.set_trace()
+            try:
+                v_now = str(datetime_utcnow.__getattribute__(k))
+            except AttributeError:
+                pass
+            if len(temporal_filter[k]) == 1:
 
-        # Adapt filter
-        year = [str(ele) for ele in dim_time_since_last.year.unique().sort_values()]
-        month = [str(ele) for ele in dim_time_since_last.month.unique().sort_values()]
-        day = [str(ele) for ele in dim_time_since_last.day.unique().sort_values()]
-        time = [ele.isoformat() for ele in numpy.unique(dim_time_since_last.time)]
+            temporal_filter.update({
+                k: temporal_filter[k][temporal_filter[k].index(dct_update_from[k]):]
+            })
 
-        self.cds_filter.update(
-        {"year": year,
-         "month": month,
-         "day": day,
-         "time": time
-        })
+
+        self.cds_filter.update(temporal_filter)
 
         # Download new data in temporary folder
         temporary_path = tempfile.mkdtemp()
@@ -229,7 +223,7 @@ class ClimateDataStoreUpdater(ClimateDataStoreDownloader):
 
         # Add data to existing file or create new file if necessary
         # Merge first file
-        import ipdb; ipdb.set_trace()
+
         path_merge_file = os.path.join(temporary_path, "tmp_merge.grib")
         subprocess.call([
             "grib_copy",
@@ -240,10 +234,46 @@ class ClimateDataStoreUpdater(ClimateDataStoreDownloader):
 
         shutil.move(path_merge_file, lst_new_files[0].as_posix())
 
-        # Move rest of files if
+        # Move files from tmp folder to storage path
         for f in lst_new_files:
             # Move and overwrite merged file
             shutil.move(f, path_storage.joinpath(f.name))
+
+
+        # # Load data and extract time dimension
+        # xds_existing_data = xarray.open_mfdataset(lst_existing_files[-1].as_posix(), **kwargs)
+
+        # try:
+        #     dim_time_storage = xds_existing_data.valid_time.to_series().values
+        #     freq_from_storage = xds_existing_data.valid_time.to_series().diff()
+        # except AttributeError:
+        #     raise("No dimension 'valid_time' found in stored dataset")
+
+        # if freq_from_storage.nunique() == 1:
+        #     freq_from_storage = pandas.DateOffset(seconds=freq_from_storage[-1].seconds)
+        # else:
+        #     raise("No continuous time frequency in storage data")
+
+        # # Define new time dimension from storage info
+        # dim_time_since_last = pandas.date_range(
+        #     start=dim_time_storage[-1],
+        #     end=datetime.datetime.now(),
+        #     freq=freq_from_storage,
+        #     closed="right"
+        # )
+
+        # # Adapt filter
+        # year = [str(ele) for ele in dim_time_since_last.year.unique().sort_values()]
+        # month = [str(ele) for ele in dim_time_since_last.month.unique().sort_values()]
+        # day = [str(ele) for ele in dim_time_since_last.day.unique().sort_values()]
+        # time = [ele.isoformat() for ele in numpy.unique(dim_time_since_last.time)]
+
+        # self.cds_filter.update(
+        # {"year": year,
+        #  "month": month,
+        #  "day": day,
+        #  "time": time
+        # })
 
 
 
