@@ -50,6 +50,10 @@ class ClimateDataStoreDownloader(object):
         self.cds_webapi = requests.get(
             url='https://cds.climate.copernicus.eu/api/v2.ui/resources/{}'.format(cds_product)).json()
 
+        # User Credentials from environment variables
+        # 'CDSAPI_URL' and 'CDSAPI_KEY'
+        self.cdsapi_client = cdsapi.Client()
+
 
     @classmethod
     def from_cds(cls, cds_product, cds_filter, **kwargs):
@@ -89,11 +93,6 @@ class ClimateDataStoreDownloader(object):
 
     def get_data(self, storage_path, split_keys=None):
         """Method documentation"""
-
-        # User Credentials from environment variables
-        # 'CDSAPI_URL' and 'CDSAPI_KEY'
-        self.cdsapi_client = cdsapi.Client()
-
         # Create storage path
         Path(storage_path).mkdir(parents=True, exist_ok=True)
 
@@ -162,17 +161,13 @@ class ClimateDataStoreDownloader(object):
 class ClimateDataStoreUpdater(ClimateDataStoreDownloader):
     """
     TODO
-    Redownload latest data file create new files if necessary
-    Under development. Only temporal update at end.
+    Update data collection, using information from cds metadata webapi. Redownload latest file to guarantee
+    Under development, for now only temporal update
     """
-    # def __init__(self, **kwargs):
-    #     super().__init__(**kwargs)
 
-    #     self.cds_time_filter_api, self.cds_time_dim_api = self._get_time_filter_and_dim_from_webapi()
-
-    def update_data(self, path_string, split_keys, **kwargs):
+    def update_data(self, path_string, split_keys, date_until=datetime.datetime.utcnow(), start_from_files=False):
         # TODO:
-        # - Problem if split_keys includes non temporal attributes (e.g. variable)
+        # - split_keys includes non temporal attributes (e.g. variable)
 
         path_storage = Path(path_string)
 
@@ -182,151 +177,65 @@ class ClimateDataStoreUpdater(ClimateDataStoreDownloader):
         else:
             raise("No valid path")
 
-        # Workaround: New updater
-        # Download full last file and if necessary following files
-        # Stop if split key value is not last element in full time filter from webapi
         temporal_filter = self._full_time_filter_from_webapi()
-        datetime_utcnow = datetime.datetime.utcnow()
 
-        dct_update_from = {}
+        file_split_keys = [tuple(f.name.rsplit("_")[:len(split_keys)]) for f in lst_existing_files]
+        all_split_keys = [i for i in itertools.product(
+            *[dict(self.cds_filter, **temporal_filter)[k] for k in split_keys])
+        ]
 
-        for i,k in enumerate(split_keys):
-            lst_key = [f.name.split("_")[i] for f in lst_existing_files]
-            if k in temporal_filter.keys():
-                dct_update_from[k] = sorted(list(set(lst_key)))[-1]
-                if temporal_filter[k][-1] != sorted(list(set(lst_key)))[-1]:
-                    break
-
-
-        for k,v in dct_update_from.items():
-            import ipdb; ipdb.set_trace()
-            try:
-                v_now = str(datetime_utcnow.__getattribute__(k))
-            except AttributeError:
-                pass
-            if len(temporal_filter[k]) == 1:
-
-            temporal_filter.update({
-                k: temporal_filter[k][temporal_filter[k].index(dct_update_from[k]):]
-            })
-
-
-        self.cds_filter.update(temporal_filter)
-
-        # Download new data in temporary folder
-        temporary_path = tempfile.mkdtemp()
-        super(ClimateDataStoreUpdater, self).get_data(temporary_path, split_keys)
-
-        lst_new_files = [f for f in Path(temporary_path).iterdir()]
-
-        # assert lst_new_files[0].rsplit("/",1)[-1] == path.rsplit("/",1)[-1], "Merge Problem, check your split_keys"
-
-        # Add data to existing file or create new file if necessary
-        # Merge first file
-
-        path_merge_file = os.path.join(temporary_path, "tmp_merge.grib")
-        subprocess.call([
-            "grib_copy",
-            lst_existing_files[-1],
-            lst_new_files[0],
-            path_merge_file
-        ])
-
-        shutil.move(path_merge_file, lst_new_files[0].as_posix())
-
-        # Move files from tmp folder to storage path
-        for f in lst_new_files:
-            # Move and overwrite merged file
-            shutil.move(f, path_storage.joinpath(f.name))
-
-
-        # # Load data and extract time dimension
-        # xds_existing_data = xarray.open_mfdataset(lst_existing_files[-1].as_posix(), **kwargs)
-
-        # try:
-        #     dim_time_storage = xds_existing_data.valid_time.to_series().values
-        #     freq_from_storage = xds_existing_data.valid_time.to_series().diff()
-        # except AttributeError:
-        #     raise("No dimension 'valid_time' found in stored dataset")
-
-        # if freq_from_storage.nunique() == 1:
-        #     freq_from_storage = pandas.DateOffset(seconds=freq_from_storage[-1].seconds)
-        # else:
-        #     raise("No continuous time frequency in storage data")
-
-        # # Define new time dimension from storage info
-        # dim_time_since_last = pandas.date_range(
-        #     start=dim_time_storage[-1],
-        #     end=datetime.datetime.now(),
-        #     freq=freq_from_storage,
-        #     closed="right"
-        # )
-
-        # # Adapt filter
-        # year = [str(ele) for ele in dim_time_since_last.year.unique().sort_values()]
-        # month = [str(ele) for ele in dim_time_since_last.month.unique().sort_values()]
-        # day = [str(ele) for ele in dim_time_since_last.day.unique().sort_values()]
-        # time = [ele.isoformat() for ele in numpy.unique(dim_time_since_last.time)]
-
-        # self.cds_filter.update(
-        # {"year": year,
-        #  "month": month,
-        #  "day": day,
-        #  "time": time
-        # })
-
-
-
-    def _get_time_filter_and_dim_from_webapi(self):
-        date_now = datetime.datetime.utcnow()
-
-        # Extract temporal filter from webapi
-        filter_date_webapi = self._full_time_filter_from_webapi()
-
-        # Assume temporal frequency from filter
-        cds_extracted_freq = self._freq_from_time_filter(filter_date_webapi)
-
-        # Acquire start and end date
-        start_date = {}
-        end_date = {}
-        for k,v in filter_date_webapi.items():
-            if k == "time":
-                start_date["hour"],start_date["minute"] = (map(int, v[0].split(":")))
-                end_date["hour"],start_date["minute"] = (map(int, v[-1].split(":")))
-            else:
-                start_date[k] = int(v[0])
-                end_date[k] = int(v[-1])
-
-        # Define time dimension from webapi
-        dim_time_webapi = pandas.date_range(
-            start=datetime.datetime(**start_date),
-            end=datetime.datetime(**end_date),
-            freq=cds_extracted_freq
+        # Until present date
+        index_present = all_split_keys.index(
+            tuple(str(date_until.__getattribute__(k)).zfill(2) for k in split_keys if k in temporal_filter.keys())
         )
 
-        # Cut time dimension if last date is bigger than today
-        if dim_time_webapi[-1] > date_now:
-            dim_time_webapi = dim_time_webapi[:dim_time_webapi.get_loc(date_now, "ffill")]
+        # Include last tuple
+        missing_split_keys = [keys for keys in all_split_keys[:index_present+1] if keys not in file_split_keys[:-1]]
 
-        return filter_date_webapi, dim_time_webapi
+        # Exclude dates earlier than date of first file
+        if start_from_files:
+            index_first = all_split_keys.index(file_split_keys[0])
+            missing_split_keys = [keys for keys in all_split_keys[index_first:index_present+1] if keys not in file_split_keys[:-1]]
+
+
+        # Download new data in temporary folder
+        with tempfile.TemporaryDirectory() as temporary_path:
+            dct_update = [{k:v for k,v in zip(split_keys, missing_split_key)} for missing_split_key in missing_split_keys]
+            split_filter = (dict(self.cds_filter, **upd) for upd in dct_update)
+
+            all_processes = []
+            for cds_filter in split_filter:
+                file_path = '_'.join([cds_filter.get(k) for k in split_keys] or ["all"]) + \
+                            "_" + self.cds_product + \
+                            "." + cds_filter.get("format", "grib")
+
+                all_processes.append(
+                    Process(
+                        target=self._retrieve_file,
+                        args=(self.cds_product,
+                            cds_filter,
+                            os.path.join(temporary_path, file_path)
+                        )
+                    )
+                )
+
+            for p in all_processes:
+                p.start()
+            for p in all_processes:
+                p.join()
+
+
+            lst_new_files = [f for f in Path(temporary_path).iterdir()]
+
+            # Move files from tmp folder to storage path
+            for f in lst_new_files:
+                # Move and overwrite merged file
+                shutil.move(f, path_storage.joinpath(f.name))
 
 
     def _full_time_filter_from_webapi(self, filter_names=["year", "month", "day", "time"]):
         return {
-            form_ele.get("name"): form_ele.get("details", {}).get("values",None)
+            form_ele.get("name"): form_ele.get("details", {}).get("values", None)
             for form_ele in self.cds_webapi.get("form")
             if form_ele.get("name") in filter_names
         }
-
-    def _freq_from_time_filter(self, filter_date_webapi):
-        # Assume temporal frequency
-        if "time" in filter_date_webapi:
-            avail_freq="{}H".format(24/len(filter_date_webapi.get("time")))
-        elif "day" in filter_date_webapi:
-            avail_freq="1D"
-        elif "month" in filter_date_webapi:
-            avail_freq="1M"
-        elif "year" in filter_date_webapi:
-            avail_freq="1Y"
-
-        return avail_freq
