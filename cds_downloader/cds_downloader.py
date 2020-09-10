@@ -31,6 +31,7 @@ from functools import reduce
 from multiprocessing import Process
 from pathlib import Path
 
+from collections import OrderedDict
 
 import cdsapi
 
@@ -56,7 +57,7 @@ class Downloader(object):
             the cds filter dictionary
         """
         self.cds_product = cds_product
-        self.cds_filter = cds_filter
+        self.cds_filter = OrderedDict(cds_filter)
         self.cds_webapi = requests.get(
             url='https://cds.climate.copernicus.eu/api/v2.ui/resources/{}'.format(cds_product)).json()
 
@@ -153,21 +154,21 @@ class Downloader(object):
         --------
         Download small data collection with manual split_keys
 
-        >>> from cds_downloader import Downloader 
-        >>> x = Downloader.from_cds( 
-        ...         "reanalysis-era5-single-levels", 
-        ...         { 
-        ...             "product_type": "reanalysis", 
-        ...             "format": "grib", 
-        ...             "variable": ["total_precipitation"], 
-        ...             "year": ["2020"], 
-        ...             "month": ["09"], 
-        ...             "day": ["01", "02", "03"], 
-        ...             "area": [50.7, 3.6, 42.9, 17.2] 
-        ...         }, 
-        ...     ) 
-        ...  
-        >>> x.get_data("/tmp", ["year","month","day"])  
+        >>> from cds_downloader import Downloader
+        >>> x = Downloader.from_cds(
+        ...         "reanalysis-era5-single-levels",
+        ...         {
+        ...             "product_type": "reanalysis",
+        ...             "format": "grib",
+        ...             "variable": ["total_precipitation"],
+        ...             "year": ["2020"],
+        ...             "month": ["09"],
+        ...             "day": ["01", "02", "03"],
+        ...             "area": [50.7, 3.6, 42.9, 17.2]
+        ...         },
+        ...     )
+        ...
+        >>> x.get_data("/tmp", ["year","month","day"])
 
         """
 
