@@ -11,7 +11,7 @@ from collections import OrderedDict
 def era5_downloader():
     return Downloader.from_cds(
             "reanalysis-era5-single-levels",
-            OrderedDict({
+            {
                 "product_type": "reanalysis",
                 "format": "grib",
                 "variable": ["2m_temperature", "potential_evaporation"],
@@ -20,7 +20,7 @@ def era5_downloader():
                 "day": ["01", "02"],
                 "time": ["00:00", "01:00"],
                 "area": [50.7, 3.6, 42.9, 17.2]
-            })
+            }
     )
 
 
@@ -31,7 +31,7 @@ def test_cds_webapi(era5_downloader):
 
 def test_org_keys(era5_downloader):
     org_keys = era5_downloader._get_org_keys()
-    assert org_keys == ["variable", "year", "month", "day", "time"]
+    assert sorted(org_keys) == sorted(["variable", "year", "month", "day", "time"])
 
 
 def test_request_size(era5_downloader):
