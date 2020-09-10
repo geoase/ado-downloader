@@ -3,11 +3,11 @@ import pytest
 import cdsapi
 import math
 
-from cds_downloader import ClimateDataStoreDownloader
+from cds_downloader import Downloader
 
 @pytest.fixture
 def era5_downloader():
-    return ClimateDataStoreDownloader.from_cds(
+    return Downloader.from_cds(
             "reanalysis-era5-single-levels",
             {
                 "product_type": "reanalysis",
@@ -21,19 +21,6 @@ def era5_downloader():
             }
     )
 
-
-@pytest.fixture
-def era5_update():
-    return ClimateDataStoreUpdater.from_cds(
-        "reanalysis-era5-single-levels",
-        {
-            "product_type": "reanalysis",
-            "format": "grib",
-            "variable": ["2m_temperature", "potential_evaporation"],
-            "area": [50.7, 3.6, 42.9, 17.2]
-        },
-        cds_delay = datetime.timedelta(days=5)
-    )
 
 
 def test_cds_webapi(era5_downloader):

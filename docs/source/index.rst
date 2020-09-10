@@ -7,14 +7,18 @@ Welcome to ado-downloader's documentation!
 ==========================================
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   :maxdepth: 1
+
+   install.rst
 
 
+.. toctree::
+   :maxdepth: 1
 
-Indices and tables
-==================
+   intro.rst
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+
+.. toctree::
+   :maxdepth: 1
+
+   reference.rst
