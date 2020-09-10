@@ -31,8 +31,6 @@ from functools import reduce
 from multiprocessing import Process
 from pathlib import Path
 
-from collections import OrderedDict
-
 import cdsapi
 
 
@@ -57,7 +55,7 @@ class Downloader(object):
             the cds filter dictionary
         """
         self.cds_product = cds_product
-        self.cds_filter = OrderedDict(cds_filter)
+        self.cds_filter = cds_filter
         self.cds_webapi = requests.get(
             url='https://cds.climate.copernicus.eu/api/v2.ui/resources/{}'.format(cds_product)).json()
 

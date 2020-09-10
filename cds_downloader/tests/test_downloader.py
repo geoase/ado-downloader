@@ -5,11 +5,13 @@ import math
 
 from cds_downloader import Downloader
 
+from collections import OrderedDict
+
 @pytest.fixture
 def era5_downloader():
     return Downloader.from_cds(
             "reanalysis-era5-single-levels",
-            {
+            OrderedDict({
                 "product_type": "reanalysis",
                 "format": "grib",
                 "variable": ["2m_temperature", "potential_evaporation"],
@@ -18,7 +20,7 @@ def era5_downloader():
                 "day": ["01", "02"],
                 "time": ["00:00", "01:00"],
                 "area": [50.7, 3.6, 42.9, 17.2]
-            }
+            })
     )
 
 
