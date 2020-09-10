@@ -17,7 +17,6 @@ __maintainer__ = "Georg Seyerl"
 __status__ = "Development"
 
 import os
-import math
 import json
 import copy
 import requests
@@ -26,8 +25,12 @@ import shutil
 import tempfile
 import datetime
 
+import operator
+from functools import reduce
+
 from multiprocessing import Process
 from pathlib import Path
+
 
 import cdsapi
 
@@ -81,6 +84,7 @@ class Downloader(object):
             print(e.args)
             raise
 
+
     @classmethod
     def from_dict(cls, dct_config):
         """
@@ -98,6 +102,7 @@ class Downloader(object):
         except Exception as e:
             print(e.args)
             raise
+
 
     @classmethod
     def from_json(cls, json_config_path):
@@ -260,16 +265,21 @@ class Downloader(object):
                 # Move and overwrite file if necessary
                 shutil.move(f, path_files.joinpath(f.name))
 
+
     def _get_org_keys(self):
         exclude_keys = ["area", "grid"]
         lst_org = [k for k,v in self.cds_filter.items() if isinstance(v, list) and k not in exclude_keys]
         return lst_org
 
+
     def _get_request_size(self, lst_keys):
-        request_size = math.prod(
-            [len(lst) for lst in [self.cds_filter.get(k, 1) for k in lst_keys]]
+        request_size = reduce(
+            operator.mul,
+            [len(lst) for lst in [self.cds_filter.get(k, 1) for k in lst_keys]],
+            1
         )
         return request_size
+
 
     def _get_split_keys(self):
         lst_org = self._get_org_keys()
@@ -278,11 +288,13 @@ class Downloader(object):
             lst_ret.append(lst_org.pop(0))
         return lst_ret
 
+
     def _expand_by_keys(self, dct, lst_keys):
         tmp_dct = copy.deepcopy(dct)
         for value in itertools.product(*[dct.get(key) for key in lst_keys]):
             tmp_dct.update(dict(zip(lst_keys, value)))
             yield tmp_dct
+
 
     def _retrieve_file(self, cds_product, cds_filter, file_name):
         self.cdsapi_client.retrieve(
@@ -290,6 +302,7 @@ class Downloader(object):
             cds_filter,
             file_name
         )
+
 
     def _retrieve_files(self, storage_path, split_filter):
         all_processes = []
@@ -314,6 +327,7 @@ class Downloader(object):
             p.join()
 
         return all_processes
+
 
     def _full_time_filter_from_webapi(self, filter_names=["year", "month", "day", "time"]):
         return {
