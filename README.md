@@ -1,6 +1,7 @@
 # ADO Downloader
 
 [![Build Status](https://dev.azure.com/gseyerl/gseyerl/_apis/build/status/geoase.ado-downloader?branchName=master)](https://dev.azure.com/gseyerl/gseyerl/_build/latest?definitionId=1&branchName=master)
+[![Documentation Status](https://readthedocs.org/projects/ado-downloader/badge/?version=latest)](https://ado-downloader.readthedocs.io/en/latest/?badge=latest)
 
 
 This downloader package is part of the EU Interreg Project: Alpine Drought Observation
