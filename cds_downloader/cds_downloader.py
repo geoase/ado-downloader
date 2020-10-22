@@ -310,18 +310,16 @@ class Downloader(object):
                         "_" + self.cds_product + \
                         "." + cds_filter.get("format", "grib")
 
-            all_processes.append(
-                Process(
-                    target=self._retrieve_file,
-                    args=(self.cds_product,
-                          cds_filter,
-                          os.path.join(storage_path, file_path)
-                    )
+            p = Process(
+                target=self._retrieve_file,
+                args=(self.cds_product,
+                      cds_filter,
+                      os.path.join(storage_path, file_path)
                 )
             )
-
-        for p in all_processes:
             p.start()
+            all_processes.append(p)
+
         for p in all_processes:
             p.join()
 
