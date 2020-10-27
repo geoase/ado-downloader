@@ -15,7 +15,7 @@ def era5_downloader():
                 "product_type": "reanalysis",
                 "format": "grib",
                 "variable": ["2m_temperature", "potential_evaporation"],
-                "year": ["1979", "1980"],
+                "year": ["1980", "1981"],
                 "month": ["01", "02"],
                 "day": ["01", "02"],
                 "time": ["00:00", "01:00"],
@@ -67,4 +67,3 @@ def test_download(era5_downloader, tmp_path, selection_limit, expected_files):
     all_processes = era5_downloader.get_data(tmpdir)
     assert len(os.listdir(tmpdir)) == len(all_processes)
     assert len(os.listdir(tmpdir)) == expected_files
-

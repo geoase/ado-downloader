@@ -33,6 +33,9 @@ from pathlib import Path
 
 import cdsapi
 
+import logging
+
+
 
 class Downloader(object):
     """The :class:`Downloader` class provides common functionality for automated
@@ -53,11 +56,16 @@ class Downloader(object):
             the cds product string
         cds_filter : dict
             the cds filter dictionary
+
+
         """
         self.cds_product = cds_product
         self.cds_filter = cds_filter
         self.cds_webapi = requests.get(
             url='https://cds.climate.copernicus.eu/api/v2.ui/resources/{}'.format(cds_product)).json()
+
+        logging.basicConfig(filename="log/cds_downloader.log", encoding='utf-8', format='%(asctime)s %(message)s')
+        logging.info('New downloader object initialized')
 
 
     @classmethod
@@ -216,7 +224,11 @@ class Downloader(object):
 
         # User Credentials from environment variables
         # 'CDSAPI_URL' and 'CDSAPI_KEY'
-        self.cdsapi_client = cdsapi.Client()
+        try:
+            self.cdsapi_client = cdsapi.Client()
+        except Exception as e:
+            logging.error("cdsapi client could not be initialized: \n" + e.args)
+            raise("cdsapi client not initialized")
 
         self.split_keys = split_keys
 
@@ -226,6 +238,7 @@ class Downloader(object):
             lst_existing_files = [f for f in path_files.glob("*." + self.cds_filter.get("format", "grib"))]
             lst_existing_files = sorted(lst_existing_files)
         else:
+            logging.error("No valid path specified")
             raise("No valid path")
 
         temporal_filter = self._full_time_filter_from_webapi()
@@ -262,7 +275,12 @@ class Downloader(object):
             # Move files from tmp folder to storage path
             for f in lst_new_files:
                 # Move and overwrite file if necessary
-                shutil.move(f, path_files.joinpath(f.name))
+                try:
+                    shutil.move(f, path_files.joinpath(f.name))
+                    logging.info("Move file from tmp to storage path: " + f)
+                except Exception as e:
+                    logging.error("Move file from tmp to storage path: " + f)
+                    print(e.args)
 
 
     def _get_org_keys(self):
@@ -296,11 +314,13 @@ class Downloader(object):
 
 
     def _retrieve_file(self, cds_product, cds_filter, file_name):
+        logging.info('Start download process ' + file_name)
         self.cdsapi_client.retrieve(
             cds_product,
             cds_filter,
             file_name
         )
+        logging.info('Finish download process ' + file_name)
 
 
     def _retrieve_files(self, storage_path, split_filter):
