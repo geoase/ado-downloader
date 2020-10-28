@@ -18,23 +18,21 @@ __status__ = "Development"
 
 import os
 import json
-import copy
 import requests
+import copy
 import itertools
 import shutil
 import tempfile
 import datetime
+import logging
 
 import operator
 from functools import reduce
 
 from multiprocessing import Process
+
 from pathlib import Path
-
 import cdsapi
-
-import logging
-
 
 
 class Downloader(object):
@@ -64,7 +62,6 @@ class Downloader(object):
         self.cds_webapi = requests.get(
             url='https://cds.climate.copernicus.eu/api/v2.ui/resources/{}'.format(cds_product)).json()
 
-        logging.basicConfig(filename="log/cds_downloader.log", encoding='utf-8', format='%(asctime)s %(message)s')
         logging.info('New downloader object initialized')
 
 
@@ -180,7 +177,11 @@ class Downloader(object):
 
         # User Credentials from environment variables
         # 'CDSAPI_URL' and 'CDSAPI_KEY'
-        self.cdsapi_client = cdsapi.Client()
+        try:
+            self.cdsapi_client = cdsapi.Client()
+        except Exception as e:
+            logging.exception("cdsapi client could not be initialized: \n" + e.args)
+            raise("cdsapi client not initialized")
 
         # Create storage path
         Path(storage_path).mkdir(parents=True, exist_ok=True)
@@ -227,7 +228,7 @@ class Downloader(object):
         try:
             self.cdsapi_client = cdsapi.Client()
         except Exception as e:
-            logging.error("cdsapi client could not be initialized: \n" + e.args)
+            logging.exception("cdsapi client could not be initialized: \n" + e.args)
             raise("cdsapi client not initialized")
 
         self.split_keys = split_keys
@@ -238,7 +239,7 @@ class Downloader(object):
             lst_existing_files = [f for f in path_files.glob("*." + self.cds_filter.get("format", "grib"))]
             lst_existing_files = sorted(lst_existing_files)
         else:
-            logging.error("No valid path specified")
+            logging.exception("No valid path specified")
             raise("No valid path")
 
         temporal_filter = self._full_time_filter_from_webapi()
@@ -279,7 +280,7 @@ class Downloader(object):
                     shutil.move(f, path_files.joinpath(f.name))
                     logging.info("Move file from tmp to storage path: " + f)
                 except Exception as e:
-                    logging.error("Move file from tmp to storage path: " + f)
+                    logging.exception("Move file from tmp to storage path: " + f)
                     print(e.args)
 
 
