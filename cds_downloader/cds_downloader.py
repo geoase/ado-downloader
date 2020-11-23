@@ -278,9 +278,9 @@ class Downloader(object):
                 # Move and overwrite file if necessary
                 try:
                     shutil.move(f, path_files.joinpath(f.name))
-                    logging.info("Move file from tmp to storage path: " + f)
+                    logging.info("Move file from tmp to storage path: " + f.as_posix())
                 except Exception as e:
-                    logging.exception("Move file from tmp to storage path: " + f)
+                    logging.exception("Move file from tmp to storage path: " + f.as_posix())
                     print(e.args)
 
 
