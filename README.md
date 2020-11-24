@@ -45,14 +45,14 @@ order to use the downloader.
 
 ### Download
 
-One approach in order to use the cds\_downloader is to copy the API request from
-the cds product page and create the Downloader object with the classmethod
+One way to use the cds\_downloader is by copying the API request from the cds
+product page and create the Downloader object with the classmethod
 [from_cds](https://ado-downloader.readthedocs.io/en/latest/reference.html#cds_downloader.Downloader.from_cds).
   
 ![API Request Example from [cds.climate.copernicus.eu](https://cds.climate.copernicus.eu/)](docs/source/images/example_cdsapi.png) <!-- .element width="50%" -->
 
-In order to create a Downloader object, e.g. from the example image above, one
-can easily copy the two arguments marked in black.
+To create a Downloader object, e.g. from the example image above, one can easily
+copy the two arguments marked in black.
 
 ```python
 from cds_downloader import Downloader
@@ -85,8 +85,9 @@ To retrieve the data with cdsapi one has to call the method
 [get_data](https://ado-downloader.readthedocs.io/en/latest/reference.html#cds_downloader.Downloader.get_data).
 
 The maximum single data request size depends on the copernicus climate data
-store and is automatically extracted from their metadata webapi. If split\_keys
-are not specified, the method automatically chunks the cds request into multiple
-smaller requests and spawns a single process for each of them. Therefore, it
-extracts all list-like objects from the cds_filter (e.g. "year", "month", ...) and
-splits the data into single requests/files.
+store and is automatically extracted from their metadata webapi. 
+
+If no split\_keys are specified, the method automatically chunks the cds request
+into multiple smaller requests and spawns a single process for each of them.
+Therefore, it extracts all list-like objects from the cds_filter (e.g. "year",
+"month", ...) and splits the data into single requests/files.
