@@ -1,8 +1,6 @@
 import click
 import logging
 
-import ast
-
 from cds_downloader import Downloader
 
 def default_none(ctx, param, value):

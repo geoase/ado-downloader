@@ -10,4 +10,4 @@ RUN pip install -r requirements.txt
 RUN python setup.py install
 
 # command to run on container start
-CMD [ "python", "./docker/entry.py" ]
+CMD [ "python", "../scripts/run_cds.py" ]
