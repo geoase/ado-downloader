@@ -47,49 +47,46 @@ order to use the downloader.
 
 One approach in order to use the cds\_downloader is to copy the API request from
 the cds product page and create the Downloader object with the classmethod
-(from_cds)[https://ado-downloader.readthedocs.io/en/latest/reference.html#cds_downloader.Downloader.from_cds].
-
-.. image:: docs/source/images/example_cdsapi.png
-  :width: 400
-  :alt: API Request Example from [cds.climate.copernicus.eu](https://cds.climate.copernicus.eu/)
+[from_cds](https://ado-downloader.readthedocs.io/en/latest/reference.html#cds_downloader.Downloader.from_cds).
+  
+![API Request Example from [cds.climate.copernicus.eu](https://cds.climate.copernicus.eu/)](docs/source/images/example_cdsapi.png)
 
 In order to create a Downloader object, e.g. from the example image above, one
 can easily copy the two arguments marked in black.
 
-
-.. code-block:: python
-
-  from cds_downloader import Downloader
+```python
+from cds_downloader import Downloader
   
-  test_downloader = Downloader.from_cds(
-    'reanalysis-era5-single-levels',
-    {
-      'product_type': 'reanalysis',
-      'format': 'grib',
-      'variable': '2m_temperature',
-      'year': [
-        '1979', '1980',
-      ],
-      'month': [
-        '01', '02',
-      ],
-      'day': [
-        '01', '02',
-      ],
-      'time': [
-        '00:00', '01:00',
-      ],
-    }
-  )
-  
-  test_downloader.get_data("storage_path", ["year", "month"])
+test_downloader = Downloader.from_cds(
+  'reanalysis-era5-single-levels',
+  {
+    'product_type': 'reanalysis',
+    'format': 'grib',
+    'variable': '2m_temperature',
+    'year': [
+      '1979', '1980',
+    ],
+    'month': [
+      '01', '02',
+    ],
+    'day': [
+      '01', '02',
+    ],
+    'time': [
+      '00:00', '01:00',
+    ],
+  }
+)
+
+test_downloader.get_data("storage_path", ["year", "month"])
+```
  
 To retrieve the data with cdsapi one has to call the method
-(get_data)[https://ado-downloader.readthedocs.io/en/latest/reference.html#cds_downloader.Downloader.get_data].
+[get_data](https://ado-downloader.readthedocs.io/en/latest/reference.html#cds_downloader.Downloader.get_data).
 
 The maximum single data request size depends on the copernicus climate data
 store and is automatically extracted from their metadata webapi. If split\_keys
 are not specified, the method automatically chunks the cds request into multiple
 smaller requests and spawns a single process for each of them. Therefore, it
-extracts all list-like objects from the cds_filter (e.g. “year, “month, …) and
+extracts all list-like objects from the cds_filter (e.g. "year", "month", ...) and
 splits the data into single requests/files.
