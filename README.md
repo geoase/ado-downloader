@@ -49,7 +49,7 @@ One way to use the cds\_downloader is by copying the API request from the cds
 product page and create the Downloader object with the classmethod
 [from_cds](https://ado-downloader.readthedocs.io/en/latest/reference.html#cds_downloader.Downloader.from_cds).
   
-!<img src="docs/source/images/example_cdsapi.png" alt="API Request Example from https://cds.climate.copernicus.eu/" width="500">
+<img src="docs/source/images/example_cdsapi.png" alt="API Request Example from https://cds.climate.copernicus.eu/" width="400">
 
 To create a Downloader object, e.g. from the example image above, one can easily
 copy the two arguments marked in black.
