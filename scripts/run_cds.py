@@ -18,12 +18,14 @@ def default_none(ctx, param, value):
 @click.option('--split-keys', "-sk", multiple=True, callback=default_none,
               help="""By setting multiple values of split_key from cds_filter keys,
               one can manually control the splitting (e.g. -sp year -sp month -sp day)""")
+@click.option('--start-from-files', '-sff', 'start_from_files', type=bool, default=False,
+              help="""Only available in update mode. Start data update from last file (experimental)""")
 @click.option('--log-path', '-lp', 'log_path', type=click.Path(), help="""Path to logging file""")
 @click.option('--log-level', '-ll', 'log_level', default="WARNING",
               type=click.Choice(["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"], case_sensitive=True),
               help="""Logging Level""")
 
-def start(config, storage_path, mode, split_keys, log_path, log_level):
+def start(config, storage_path, mode, split_keys, start_from_files, log_path, log_level):
     """CDS Downloader command line interface"""
 
     if log_path != None:
@@ -41,7 +43,8 @@ def start(config, storage_path, mode, split_keys, log_path, log_level):
     if mode == "download":
         cds_downloader.get_data(storage_path, split_keys)
     elif mode == "update":
-        cds_downloader.update_data(storage_path, split_keys)
+        cds_downloader.update_data(storage_path, split_keys, start_from_files=start_from_files)
+
 
 
 if __name__ == '__main__':
