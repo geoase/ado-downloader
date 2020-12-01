@@ -25,6 +25,7 @@ import shutil
 import tempfile
 import datetime
 import logging
+import re
 
 import operator
 from functools import reduce
@@ -197,7 +198,8 @@ class Downloader(object):
 
 
     def update_data(self, storage_path, split_keys,
-                    date_until=datetime.datetime.utcnow(), start_from_files=False):
+                    date_until=datetime.datetime.utcnow(), date_latency=None,
+                    start_from_files=False):
         """This method provides update functionality for climate data collections
         retrieved with :meth:`cds_downloader.Downloader.get_data`
 
@@ -222,6 +224,9 @@ class Downloader(object):
 
         # TODO:
         # - split_keys includes non temporal attributes (e.g. variable)
+
+        if date_latency:
+            date_until = date_until - self._parse_time(date_latency)
 
         # User Credentials from environment variables
         # 'CDSAPI_URL' and 'CDSAPI_KEY'
@@ -355,4 +360,24 @@ class Downloader(object):
         }
 
 
+    def _parse_time(time_str):
+        """
+        Parse a time string e.g. '2h 13m' or '1.5d' into a timedelta object.
+        Based on Peter's answer at https://stackoverflow.com/a/51916936/2445204
+        and virhilo's answer at https://stackoverflow.com/a/4628148/851699
+        :param time_str: A string identifying a duration, e.g. '2h13.5m'
+        :return datetime.timedelta: A datetime.timedelta object
+        """
+        regex = re.compile(
+            r'^((?P<days>[\.\d]+?)D)? *'
+            r'((?P<hours>[\.\d]+?)h)? *'
+            r'((?P<minutes>[\.\d]+?)m)? *'
+            r'((?P<seconds>[\.\d]+?)s)?$')
 
+
+        parts = regex.match(time_str)
+        assert parts is not None, """Could not parse any time information from '{}'.
+            Examples of valid strings: '8h', '2D 8h 5m 2s', '2m4.3s'""".format(time_str)
+        time_params = {name: float(param)
+                       for name, param in parts.groupdict().items() if param}
+        return datetime.timedelta(**time_params)
