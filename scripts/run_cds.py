@@ -20,12 +20,15 @@ def default_none(ctx, param, value):
               one can manually control the splitting (e.g. -sp year -sp month -sp day)""")
 @click.option('--start-from-files', '-sff', 'start_from_files', type=bool, default=False,
               help="""Only available in update mode. Start data update from last file (experimental)""")
+@click.option('--date-latency', '-dl', 'date_latency', type=str, callback=default_none,
+              help="""Only available in update mode. Specify start date latency from now backwards, e.g.
+              '5D' or '2D 8h 5m 2s' (experimental)""")
 @click.option('--log-path', '-lp', 'log_path', type=click.Path(), help="""Path to logging file""")
 @click.option('--log-level', '-ll', 'log_level', default="WARNING",
               type=click.Choice(["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"], case_sensitive=True),
               help="""Logging Level""")
 
-def start(config, storage_path, mode, split_keys, start_from_files, log_path, log_level):
+def start(config, storage_path, mode, split_keys, start_from_files, date_latency, log_path, log_level):
     """CDS Downloader command line interface"""
 
     if log_path != None:
@@ -43,7 +46,7 @@ def start(config, storage_path, mode, split_keys, start_from_files, log_path, lo
     if mode == "download":
         cds_downloader.get_data(storage_path, split_keys)
     elif mode == "update":
-        cds_downloader.update_data(storage_path, split_keys, start_from_files=start_from_files)
+        cds_downloader.update_data(storage_path, split_keys, start_from_files=start_from_files, date_latency=date_latency)
 
 
 

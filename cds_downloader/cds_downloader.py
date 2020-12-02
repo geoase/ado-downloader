@@ -217,6 +217,8 @@ class Downloader(object):
             list of keys in cds_filter
         date_until : datetime.datetime, optional
             update data collection until this date
+        date_latency : datetime.timedelta or str, optional
+            temporal latency in relation to date_until
         start_from_files : boolean, optional
              use first file of sorted file list as start reference date
 
@@ -225,8 +227,10 @@ class Downloader(object):
         # TODO:
         # - split_keys includes non temporal attributes (e.g. variable)
 
-        if date_latency:
+        if isinstance(date_latency, str):
             date_until = date_until - self._parse_time(date_latency)
+        elif isinstance(date_latency, datetime.timedelta):
+            date_until = date_until - date_latency
 
         # User Credentials from environment variables
         # 'CDSAPI_URL' and 'CDSAPI_KEY'
