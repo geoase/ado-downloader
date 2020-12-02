@@ -364,7 +364,7 @@ class Downloader(object):
         }
 
 
-    def _parse_time(time_str):
+    def _parse_time(self, time_str):
         """
         Parse a time string e.g. '2h 13m' or '1.5d' into a timedelta object.
         Based on Peter's answer at https://stackoverflow.com/a/51916936/2445204
