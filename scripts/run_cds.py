@@ -20,7 +20,7 @@ def default_none(ctx, param, value):
               one can manually control the splitting (e.g. -sp year -sp month -sp day)""")
 @click.option('--start-from-files', '-sff', 'start_from_files', type=bool, default=False,
               help="""Only available in update mode. Start data update from last file (experimental)""")
-@click.option('--date-latency', '-dl', 'date_latency', type=str, callback=default_none,
+@click.option('--date-latency', '-dl', 'date_latency', type=str, default=False,
               help="""Only available in update mode. Specify start date latency from now backwards, e.g.
               '5D' or '2D 8h 5m 2s' (experimental)""")
 @click.option('--log-path', '-lp', 'log_path', type=click.Path(), help="""Path to logging file""")
