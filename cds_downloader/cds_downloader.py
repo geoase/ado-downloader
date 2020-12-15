@@ -130,16 +130,13 @@ class Downloader(object):
             raise
 
 
-    def get_data(self, storage_path, overwrite=False, split_keys=None):
+    def get_data(self, storage_path, split_keys=None, overwrite=False):
         """This method downloads requested data from climate data store.
 
         Parameters
         ----------
         storage_path : string
             target storage path as string
-        overwrite: boolean
-            Default is False, Set to true if you want to overwrite existing files.
-            This implies new requests on the climate data store.
         split_keys : list-like, optional
             The maximum single data request size depends on the copernicus
             climate data store and is automatically extracted from their
@@ -151,6 +148,9 @@ class Downloader(object):
 
             By setting split_keys as a list of keys from the cds_filter, one can
             manually control the splitting (e.g. split_keys=["year", "month", "day"])
+        overwrite: boolean
+            Default is False, Set to true if you want to overwrite existing files.
+            This implies new requests on the climate data store.
 
         Returns
         -------
