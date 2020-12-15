@@ -130,13 +130,16 @@ class Downloader(object):
             raise
 
 
-    def get_data(self, storage_path, split_keys=None):
+    def get_data(self, storage_path, overwrite=False, split_keys=None):
         """This method downloads requested data from climate data store.
 
         Parameters
         ----------
         storage_path : string
             target storage path as string
+        overwrite: boolean
+            Default is False, Set to true if you want to overwrite existing files.
+            This implies new requests on the climate data store.
         split_keys : list-like, optional
             The maximum single data request size depends on the copernicus
             climate data store and is automatically extracted from their
@@ -194,7 +197,7 @@ class Downloader(object):
             self.split_keys = split_keys
 
         split_filter = self._expand_by_keys(self.cds_filter, self.split_keys)
-        return self._retrieve_files(storage_path, split_filter)
+        return self._retrieve_files(storage_path, split_filter, overwrite)
 
 
     def update_data(self, storage_path, split_keys,
@@ -333,22 +336,25 @@ class Downloader(object):
         logging.info('Finish download process ' + file_name)
 
 
-    def _retrieve_files(self, storage_path, split_filter):
+    def _retrieve_files(self, storage_path, split_filter, overwrite=False):
         all_processes = []
         for cds_filter in split_filter:
             file_path = '_'.join([cds_filter.get(k) for k in self.split_keys] or ["all"]) + \
                         "_" + self.cds_product + \
                         "." + cds_filter.get("format", "grib")
 
-            p = Process(
-                target=self._retrieve_file,
-                args=(self.cds_product,
-                      cds_filter,
-                      os.path.join(storage_path, file_path)
+            if not os.path.exists(os.path.join(storage_path, file_path)) or overwrite:
+                p = Process(
+                    target=self._retrieve_file,
+                    args=(self.cds_product,
+                          cds_filter,
+                          os.path.join(storage_path, file_path)
+                    )
                 )
-            )
-            p.start()
-            all_processes.append(p)
+                p.start()
+                all_processes.append(p)
+            else:
+                logging.info('File {} already exists and is not going to be requested from cds' + file_path)
 
         for p in all_processes:
             p.join()
