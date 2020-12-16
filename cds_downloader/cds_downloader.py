@@ -354,7 +354,7 @@ class Downloader(object):
                 p.start()
                 all_processes.append(p)
             else:
-                logging.info('File {} already exists and is not going to be requested from cds' + file_path)
+                logging.info('File already exists and is not going to be requested from cds ' + file_path)
 
         for p in all_processes:
             p.join()
