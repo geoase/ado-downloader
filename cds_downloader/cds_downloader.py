@@ -5,10 +5,11 @@ cds_downloader.py:
 Climate Data Store Downloader
 
 TODO:
- - Logging
  - Adapt requirements.txt
- - If config not complete, use criterias from cds_webapi
+ - Check requests queue from api and do not add new request if already pending
+ - Delete failed requests from queue via api
  - Check configuration
+   + config not complete, use criterias from cds_webapi
 """
 
 __author__ = "Georg Seyerl"
