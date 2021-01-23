@@ -201,6 +201,44 @@ class Downloader(object):
         return self._retrieve_files(storage_path, split_filter, overwrite)
 
 
+    def get_latest_daily_data(self, storage_path, latency=None):
+        "TODO"
+        # User Credentials from environment variables
+        # 'CDSAPI_URL' and 'CDSAPI_KEY'
+        try:
+            self.cdsapi_client = cdsapi.Client()
+        except Exception as e:
+            logging.exception("cdsapi client could not be initialized: \n" + e.args)
+            raise("cdsapi client not initialized")
+
+        self.split_keys = ["variable","year","month","day"]
+
+        if latency is None:
+            date_download=datetime.datetime.utcnow()
+        elif isinstance(latency,int):
+            date_download=datetime.datetime.utcnow() - datetime.timedelta(days=latency)
+        else:
+            raise("The parameter latency has to be an integer")
+
+        temporal_filter = self._full_time_filter_from_webapi()
+        temporal_filter.update(
+            {"year": str(date_download.year),
+             "month": str(date_download.month),
+             "day": str(date_download.day)
+            }
+        )
+        cds_filter = copy.deepcopy(self.cds_filter)
+        cds_filter.update(temporal_filter)
+
+        split_filter = self._expand_by_keys(cds_filter, self.split_keys)
+
+        # Create storage path
+        Path(storage_path).mkdir(parents=True, exist_ok=True)
+
+        return self._retrieve_files(storage_path, split_filter, overwrite=True)
+
+
+
     def update_data(self, storage_path, split_keys,
                     date_until=datetime.datetime.utcnow(), date_latency=None,
                     start_from_files=False):
@@ -322,7 +360,7 @@ class Downloader(object):
 
     def _expand_by_keys(self, dct, lst_keys):
         tmp_dct = copy.deepcopy(dct)
-        for value in itertools.product(*[dct.get(key) for key in lst_keys]):
+        for value in itertools.product(*[dct.get(key) for key in lst_keys if isinstance(dct.get(key),list)]):
             tmp_dct.update(dict(zip(lst_keys, value)))
             yield tmp_dct
 
