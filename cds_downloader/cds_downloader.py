@@ -202,7 +202,18 @@ class Downloader(object):
 
 
     def get_latest_daily_data(self, storage_path, latency=None):
-        "TODO"
+        """This method uses temporal information from the webapi and downloads only the
+        latest day of the data. Hereby, one can define a latency in days with
+        respect to the current datetime.
+
+        Parameters
+        ----------
+        storage_path : string
+            storage path of data collection as string
+        latency : integer
+            latency in days with respect to the current utc date and time
+
+        """
         # User Credentials from environment variables
         # 'CDSAPI_URL' and 'CDSAPI_KEY'
         try:
@@ -213,6 +224,7 @@ class Downloader(object):
 
         self.split_keys = ["variable","year","month","day"]
 
+        # If latency is defined, subtract from actual UTC date
         if latency is None:
             date_download=datetime.datetime.utcnow()
         elif isinstance(latency,int):
@@ -220,6 +232,7 @@ class Downloader(object):
         else:
             raise("The parameter latency has to be an integer")
 
+        # Update temporal filter from webapi
         temporal_filter = self._full_time_filter_from_webapi()
         temporal_filter.update(
             {"year": str(date_download.year),
