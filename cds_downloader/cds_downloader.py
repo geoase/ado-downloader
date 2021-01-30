@@ -201,7 +201,7 @@ class Downloader(object):
         return self._retrieve_files(storage_path, split_filter, overwrite)
 
 
-    def get_latest_daily_data(self, storage_path, latency=None):
+    def get_latest_daily_data(self, storage_path, latency=None, **kwargs):
         """This method uses temporal information from the webapi and downloads only the
         latest day of the data. Hereby, one can define a latency in days with
         respect to the current datetime.
@@ -217,7 +217,7 @@ class Downloader(object):
         # User Credentials from environment variables
         # 'CDSAPI_URL' and 'CDSAPI_KEY'
         try:
-            self.cdsapi_client = cdsapi.Client()
+            self.cdsapi_client = cdsapi.Client(**kwargs)
         except Exception as e:
             logging.exception("cdsapi client could not be initialized: \n" + e.args)
             raise("cdsapi client not initialized")
