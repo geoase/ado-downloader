@@ -12,7 +12,7 @@ def default_none(ctx, param, value):
 @click.command()
 @click.option('--config', '-c', required=True, type=click.Path(exists=True), help='JSON configuration file')
 @click.option('--path', '-p', 'storage_path', required=True, type=click.Path(), help="""Target storage path""")
-@click.option('--mode', '-m', default='download', type=click.Choice(['download', 'update'], case_sensitive=True),
+@click.option('--mode', '-m', default='download', type=click.Choice(['download', 'update', 'daily'], case_sensitive=True),
               help="""The operational mode 'update' is experimental. It is recommended to provide
               the exact same set of split-keys from the already existing data collection.""")
 @click.option('--split-keys', "-sk", multiple=True, callback=default_none,
@@ -47,6 +47,8 @@ def start(config, storage_path, mode, split_keys, start_from_files, date_latency
         cds_downloader.get_data(storage_path, split_keys)
     elif mode == "update":
         cds_downloader.update_data(storage_path, split_keys, start_from_files=start_from_files, date_latency=date_latency)
+    elif mode == "daily":
+        cds_downloader.get_latest_daily_data(storage_path, date_latency=date_latency)
 
 
 

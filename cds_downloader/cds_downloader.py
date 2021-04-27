@@ -201,7 +201,7 @@ class Downloader(object):
         return self._retrieve_files(storage_path, split_filter, overwrite)
 
 
-    def get_latest_daily_data(self, storage_path, latency=None, **kwargs):
+    def get_latest_daily_data(self, storage_path, date_latency=None, **kwargs):
         """This method uses temporal information from the webapi and downloads only the
         latest day of the data. Hereby, one can define a latency in days with
         respect to the current datetime.
@@ -210,8 +210,8 @@ class Downloader(object):
         ----------
         storage_path : string
             storage path of data collection as string
-        latency : integer
-            latency in days with respect to the current utc date and time
+        date_latency : datetime.timedelta or str or int, optional
+            Latency with respect to the current utc date and time. If integer is passed the latency is interpreted as days.
 
         """
         # User Credentials from environment variables
@@ -225,12 +225,16 @@ class Downloader(object):
         self.split_keys = ["variable","year","month","day"]
 
         # If latency is defined, subtract from actual UTC date
-        if latency is None:
+        if date_latency is None:
             date_download=datetime.datetime.utcnow()
-        elif isinstance(latency,int):
-            date_download=datetime.datetime.utcnow() - datetime.timedelta(days=latency)
+        elif isinstance(date_latency,int):
+            date_download=datetime.datetime.utcnow() - datetime.timedelta(days=date_latency)
+        elif isinstance(date_latency, str):
+            date_download = datetime.datetime.utcnow() - self._parse_time(date_latency)
+        elif isinstance(date_latency, datetime.timedelta):
+            date_download = datetime.datetime.utcnow() - date_latency
         else:
-            raise("The parameter latency has to be an integer")
+            raise("The parameter date_latency has to be an integer, str or datetime.timedelta object")
 
         # Update temporal filter from webapi
         temporal_filter = self._full_time_filter_from_webapi()
