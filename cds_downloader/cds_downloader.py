@@ -395,8 +395,8 @@ class Downloader(object):
     def _retrieve_files(self, storage_path, split_filter, overwrite=False):
         all_processes = []
         for cds_filter in split_filter:
-            file_path = '_'.join([cds_filter.get(k) for k in self.split_keys] or ["all"]) + \
-                        "_" + self.cds_product + \
+            file_path = '-'.join([cds_filter.get(k) for k in self.split_keys] or ["all"]) + \
+                        "-" + self.cds_product + \
                         "." + cds_filter.get("format", "grib")
 
             if not os.path.exists(os.path.join(storage_path, file_path)) or overwrite:
