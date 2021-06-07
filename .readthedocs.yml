@@ -4,6 +4,6 @@ sphinx:
 
 python:
   install:
-    - requirements: requirements.txt
+    - requirements: requirements_linux.txt
 
 formats: all
