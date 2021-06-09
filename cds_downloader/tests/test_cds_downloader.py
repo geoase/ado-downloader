@@ -25,7 +25,7 @@ def era5_downloader():
 
 
 def test_cds_webapi(era5_downloader):
-    assert len(era5_downloader.cds_webapi.keys()) == 36
+    assert len(era5_downloader.cds_webapi.keys()) == 38
     assert len(era5_downloader.cds_webapi.get("form")) == 10
 
 
