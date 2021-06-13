@@ -382,17 +382,20 @@ class Downloader(object):
             yield tmp_dct
 
 
-    def _retrieve_file(self, cds_product, cds_filter, file_name):
-        logging.info('Start download process ' + file_name)
-        self.cdsapi_client.retrieve(
-            cds_product,
-            cds_filter,
-            file_name
-        )
-        logging.info('Finish download process ' + file_name)
+    def _retrieve_file(self, cds_product, cds_filter, file_name, dry_run=False):
+        if not dry_run:
+            logging.info('Start download process ' + file_name)
+            self.cdsapi_client.retrieve(
+                cds_product,
+                cds_filter,
+                file_name
+            )
+            logging.info('Finish download process ' + file_name)
+        else:
+            logging.info('Dry run, therefore no download process started for file ' + file_name)
 
 
-    def _retrieve_files(self, storage_path, split_filter, overwrite=False):
+    def _retrieve_files(self, storage_path, split_filter, overwrite=False, dry_run=False):
         all_processes = []
         for cds_filter in split_filter:
             file_path = '_'.join([cds_filter.get(k) for k in self.split_keys] or ["all"]) + \
@@ -404,7 +407,8 @@ class Downloader(object):
                     target=self._retrieve_file,
                     args=(self.cds_product,
                           cds_filter,
-                          os.path.join(storage_path, file_path)
+                          os.path.join(storage_path, file_path),
+                          dry_run
                     )
                 )
                 p.start()
@@ -439,7 +443,6 @@ class Downloader(object):
             r'((?P<hours>[\.\d]+?)h)? *'
             r'((?P<minutes>[\.\d]+?)m)? *'
             r'((?P<seconds>[\.\d]+?)s)?$')
-
 
         parts = regex.match(time_str)
         assert parts is not None, """Could not parse any time information from '{}'.
