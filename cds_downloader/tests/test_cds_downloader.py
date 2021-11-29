@@ -25,8 +25,8 @@ def era5_downloader():
 
 
 def test_cds_webapi(era5_downloader):
-    assert len(era5_downloader.cds_webapi.keys()) == 38
-    assert len(era5_downloader.cds_webapi.get("form")) == 10
+    assert "form" in era5_downloader.cds_webapi
+    assert "selection_limit" in era5_downloader.cds_webapi
 
 
 def test_org_keys(era5_downloader):
@@ -38,10 +38,13 @@ def test_request_size(era5_downloader):
     req_size = era5_downloader._get_request_size(["variable", "year", "month", "day", "time"])
     assert req_size == 32
 
+
 def test_multiprocess_download(era5_downloader):
     era5_downloader.split_keys = ["variable","year"]
     split_filter = era5_downloader._expand_by_keys(era5_downloader.cds_filter, era5_downloader.split_keys)
-    era5_downloader._retrieve_files("NO_STORAGE_PATH", split_filter, dry_run=True)
+    lst_processes = era5_downloader._retrieve_files("NO_STORAGE_PATH", split_filter, dry_run=True)
+    assert len(lst_processes) == 4
+
 
 @pytest.mark.parametrize(
     "selection_limit, expected_size",
