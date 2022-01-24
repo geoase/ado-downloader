@@ -214,16 +214,6 @@ class Downloader(object):
             Latency with respect to the current utc date and time. If integer is passed the latency is interpreted as days.
 
         """
-        # User Credentials from environment variables
-        # 'CDSAPI_URL' and 'CDSAPI_KEY'
-        try:
-            self.cdsapi_client = cdsapi.Client(**kwargs)
-        except Exception as e:
-            logging.exception("cdsapi client could not be initialized: \n" + e.args)
-            raise("cdsapi client not initialized")
-
-        self.split_keys = ["variable","year","month","day"]
-
         # If latency is defined, subtract from actual UTC date
         if date_latency is None:
             date_download=datetime.datetime.utcnow()
@@ -235,6 +225,38 @@ class Downloader(object):
             date_download = datetime.datetime.utcnow() - date_latency
         else:
             raise("The parameter date_latency has to be an integer, str or datetime.timedelta object")
+
+        self.get_data_for_date(storage_path=storage_path, eval_date=date_download, **kwargs)
+
+    def get_data_for_date(self, storage_path, eval_date=datetime.datetime.utcnow(), **kwargs):
+        """This method uses temporal information from the webapi and downloads 
+        data for a specified date.
+
+        Parameters
+        ----------
+        storage_path : string
+            storage path of data collection as string
+        eval_date : datetime.timedelta or str
+            date of the data fields
+
+        """
+        # User Credentials from environment variables
+        # 'CDSAPI_URL' and 'CDSAPI_KEY'
+        try:
+            self.cdsapi_client = cdsapi.Client(**kwargs)
+        except Exception as e:
+            logging.exception("cdsapi client could not be initialized: \n" + e.args)
+            raise("cdsapi client not initialized")
+
+        self.split_keys = ["variable","year","month","day"]
+
+        # input handling for date_download
+        if isinstance(eval_date, str):
+            date_download = datetime.datetime.strptime(eval_date, "%Y-%m-%d")
+        elif isinstance(eval_date, datetime.datetime):
+            date_download = eval_date
+        else:
+            raise("The parameter eval_date has to be a str (ISO date) or datetime.timedelta object")
 
         # Update temporal filter from webapi
         temporal_filter = self._full_time_filter_from_webapi()
